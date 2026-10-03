@@ -13,7 +13,7 @@ jobs:
 
     env:
       scheme: CineDossier
-      project: CineDossier.xcodeproj
+      project: CineDossier/CineDossier.xcodeproj
 
     steps:
       - name: Checkout
