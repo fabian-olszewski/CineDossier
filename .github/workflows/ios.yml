@@ -1,0 +1,38 @@
+name: iOS CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    name: Build and Test
+    runs-on: macos-latest
+
+    env:
+      scheme: CineDossier
+      project: CineDossier.xcodeproj
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        
+      - name: Generate Secrets.swift
+        run: |
+          cat > CineDossier/CineDossier/Secrets.swift <<EOF
+          enum Secrets {
+              static let apiReadAccessToken = "${{ secrets.TMDB_API_READ_ACCESS_TOKEN }}"
+          }
+          EOF
+      
+      - name: Build for testing
+        run: |
+          device=$(xcrun xctrace list devices 2>&1 | grep -oE 'iPhone.*?[^\(]+' | head -1 | awk '{$1=$1;print}' | sed -e "s/ Simulator$//")
+          xcodebuild build-for-testing -scheme "$scheme" -project "$project" -destination "platform=iOS Simulator,name=$device"
+
+      - name: Run tests
+        run: |
+          device=$(xcrun xctrace list devices 2>&1 | grep -oE 'iPhone.*?[^\(]+' | head -1 | awk '{$1=$1;print}' | sed -e "s/ Simulator$//")
+          xcodebuild test-without-building -scheme "$scheme" -project "$project" -destination "platform=iOS Simulator,name=$device"
