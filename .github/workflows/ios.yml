@@ -23,7 +23,7 @@ jobs:
         run: |
           cat > CineDossier/CineDossier/Secrets.swift <<EOF
           enum Secrets {
-              static let apiReadAccessToken = "${{ secrets.TMDB_API_READ_ACCESS_TOKEN }}"
+              static let tmdbReadAccessToken = "${{ secrets.TMDB_API_READ_ACCESS_TOKEN }}"
           }
           EOF
       
