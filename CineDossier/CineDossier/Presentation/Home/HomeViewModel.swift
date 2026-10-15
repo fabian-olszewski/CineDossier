@@ -15,7 +15,7 @@ class HomeViewModel {
     var genres: [Genre] = [] //Genre.samples
     var movies: [Movie] = [] //Movie.samples
     
-    var isLoading: Bool = false
+    var isLoading = false
     var errorMessage: String?
     
     init(movieRepository: MovieRepository = RemoteMovieRepository(),

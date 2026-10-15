@@ -20,7 +20,11 @@ struct HomeView: View {
                 if viewModel.isLoading, viewModel.movies.isEmpty {
                     ProgressView()
                 } else if let errorMessage = viewModel.errorMessage, viewModel.movies.isEmpty {
-                    contentUnavailableView(errorMessage)
+                    ErrorStateView(errorMessage: errorMessage) {
+                        Task {
+                            await viewModel.loadContent()
+                        }
+                    }
                 } else {
                     contentView
                 }
@@ -86,20 +90,6 @@ struct HomeView: View {
         }
         .refreshable {
             await viewModel.loadContent()
-        }
-    }
-    
-    private func contentUnavailableView(_ errorMessage: String) -> some View {
-        ContentUnavailableView {
-            Label("Something went wrong", systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(errorMessage)
-        } actions: {
-            Button("Try again") {
-                Task {
-                    await viewModel.loadContent()
-                }
-            }
         }
     }
     

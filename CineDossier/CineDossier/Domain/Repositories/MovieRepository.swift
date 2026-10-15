@@ -7,4 +7,5 @@
 
 protocol MovieRepository {
     func fetchTrendingMovies() async throws -> [Movie]
+    func fetchMovies(byQuery query: String) async throws -> [Movie]
 }

@@ -12,29 +12,31 @@ struct MovieCellView: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            AsyncImage(url: movie.posterURL()) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                LinearGradient(colors: [Color.surfaceSecondary,
-                                        Color.surfacePrimary,
-                                        Color.backgroundPrimary],
-                               startPoint: .topLeading,
-                               endPoint: .bottomTrailing)
-            }
-            .aspectRatio(2/3, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 8))
-            
+            Color.clear
+                .aspectRatio(2/3, contentMode: .fit)
+                .overlay {
+                    AsyncImage(url: movie.posterURL()) { image in
+                        image
+                            .resizable()
+                            .scaledToFill()
+                    } placeholder: {
+                        LinearGradient(colors: [Color.surfaceSecondary,
+                                                Color.surfacePrimary,
+                                                Color.backgroundPrimary],
+                                       startPoint: .topLeading,
+                                       endPoint: .bottomTrailing)
+                    }
+                }
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
             Text(movie.title)
                 .foregroundStyle(.textPrimary)
                 .font(.headline)
                 .fontWeight(.bold)
                 .lineLimit(1)
-            
+
             RatingView(ratingValue: movie.voteAverage)
         }
-        //.padding(.horizontal)
     }
 }
 

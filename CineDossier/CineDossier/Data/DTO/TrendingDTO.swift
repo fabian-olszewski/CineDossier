@@ -1,11 +1,11 @@
 //
-//  Trending.swift
+//  MovieResponseDTO.swift
 //  CineDossier
 //
 //  Created by Fabian Olszewski on 10/08/2026.
 //
 
-struct TrendingResponseDTO: Decodable {
+struct MovieResponseDTO: Decodable {
     let results: [MovieDTO]
     let page: Int
     let totalPages: Int

@@ -16,7 +16,13 @@ struct TheMovieDatabaseAPIService {
     
     func fetchTrendingMovies() async throws -> [MovieDTO] {
         let trendingEndpoint = TheMovieDatabaseEndpoint.trending(type: .movies, timeWindow: .day)
-        let response: TrendingResponseDTO = try await client.send(trendingEndpoint)
+        let response: MovieResponseDTO = try await client.send(trendingEndpoint)
+        return response.results
+    }
+    
+    func fetchMovies(_ query: String) async throws -> [MovieDTO] {
+        let searchEndpoint = TheMovieDatabaseEndpoint.search(query: query)
+        let response: MovieResponseDTO = try await client.send(searchEndpoint)
         return response.results
     }
     

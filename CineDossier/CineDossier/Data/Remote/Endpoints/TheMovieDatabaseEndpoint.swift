@@ -10,6 +10,7 @@ import Foundation
 enum TheMovieDatabaseEndpoint: Endpoint {
     case trending(type: TrendingType, timeWindow: TrendingTimeWindow)
     case movieGenres
+    case search(query: String)
     
     enum TrendingType: String {
         case movies = "movie"
@@ -31,7 +32,22 @@ enum TheMovieDatabaseEndpoint: Endpoint {
                 return "/trending/\(type.rawValue)/\(timeWindow.rawValue)"
             case .movieGenres:
                 return "/genre/movie/list"
+            case .search:
+                return "/search/movie"
         }
+    }
+    
+    var queryItems: [URLQueryItem] {
+        var items: [URLQueryItem] = []
+        
+        switch self {
+        case .search(let query):
+            items.append(URLQueryItem(name: "query", value: query))
+        default:
+            break
+        }
+        
+        return items
     }
     
     var headers: [String: String] {
