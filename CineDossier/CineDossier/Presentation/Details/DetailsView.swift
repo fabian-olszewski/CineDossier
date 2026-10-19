@@ -7,11 +7,70 @@
 
 import SwiftUI
 
-struct DetailsView: View {
+@Observable
+class DetailsViewModel {
     let movie: Movie
-    @Environment(\.dismiss) private var dismiss
+    let playbackRepository: PlaybackRepository
+    
+    private(set) var isLoadingPlayback = false
+    private(set) var playbackItems: [PlaybackItem] = []
+    var isPlayerPresented = false
+    var errorMessage: String?
+    
+    init(movie: Movie,
+         playbackRepository: PlaybackRepository = StaticPlaybackRepository()) {
+        self.movie = movie
+        self.playbackRepository = playbackRepository
+    }
+    
+    var title: String {
+        movie.title
+    }
+    
+    var averageVote: Double {
+        movie.voteAverage
+    }
+    
+    var description: String {
+        movie.overview
+    }
+    
+    var poster: URL? {
+        movie.posterURL(size: .large)
+    }
+    
+    func didTapPlay() async {
+        guard !isLoadingPlayback else { return }
+        isLoadingPlayback = true
+        errorMessage = nil
+        defer { isLoadingPlayback = false }
+
+        do {
+            let items = try await playbackRepository.items(for: movie)
+            guard !items.isEmpty else {
+                errorMessage = "No items to play"
+                return
+            }
+            playbackItems = items
+            isPlayerPresented = true
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+}
+
+struct DetailsView: View {
+    @State
+    private var viewModel: DetailsViewModel
+    
+    @Environment(\.dismiss)
+    private var dismiss
 
     private let heroHeight: CGFloat = 380
+    
+    init(movie: Movie) {
+        self.viewModel = DetailsViewModel(movie: movie)
+    }
 
     var body: some View {
         ScrollView {
@@ -23,11 +82,22 @@ struct DetailsView: View {
         .ignoresSafeArea(edges: .top)
         .background(Color.backgroundPrimary)
         .toolbar(.hidden, for: .tabBar)
+        .fullScreenCover(isPresented: $viewModel.isPlayerPresented) {
+            PlayerView(items: viewModel.playbackItems)
+        }
+        .alert("Playback failed",
+               isPresented: .constant(viewModel.errorMessage != nil)) {
+            Button("Ok") {
+                viewModel.errorMessage = nil
+            }
+        } message: {
+            Text(viewModel.errorMessage ?? "")
+        }
     }
 
     private var heroSection: some View {
         ZStack(alignment: .bottomLeading) {
-            AsyncImage(url: movie.posterURL(size: .large)) { phase in
+            AsyncImage(url: viewModel.poster) { phase in
                 switch phase {
                 case .success(let image):
                     image.resizable().scaledToFill()
@@ -48,27 +118,39 @@ struct DetailsView: View {
             .frame(height: heroHeight)
 
             VStack(alignment: .leading, spacing: 8) {
-                Text(movie.title)
+                Text(viewModel.title)
                     .font(.title2)
                     .fontWeight(.bold)
-                    .foregroundStyle(.white)
+                    .foregroundStyle(.textPrimary)
 
-                RatingView(ratingValue: movie.voteAverage)
+                RatingView(ratingValue: viewModel.averageVote)
             }
             .padding(.horizontal, 20)
-            .padding(.bottom, 18)
         }
         .frame(height: heroHeight)
     }
 
     private var overviewSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("Opis")
+            Button {
+                Task { await viewModel.didTapPlay() }
+            } label: {
+                if viewModel.isLoadingPlayback {
+                    ProgressView().tint(Color.backgroundPrimary)
+                } else {
+                    Label("Play", systemImage: "play.fill")
+                }
+            }
+            .buttonStyle(PrimaryButtonStyle())
+            .disabled(viewModel.isLoadingPlayback)
+            .padding(.bottom, 16)
+            
+            Text("Description")
                 .font(.subheadline)
                 .fontWeight(.bold)
                 .foregroundStyle(Color.textSecondary)
 
-            Text(movie.overview)
+            Text(viewModel.description)
                 .font(.body)
                 .foregroundStyle(Color.textPrimary)
                 .lineSpacing(4)

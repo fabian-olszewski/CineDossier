@@ -8,16 +8,6 @@
 import XCTest
 @testable import CineDossier
 
-struct MockMovieRepository: MovieRepository {
-    var searchResult: Result<[Movie], Error> = .success([])
-
-    func fetchTrendingMovies() async throws -> [Movie] { [] }
-
-    func fetchMovies(byQuery query: String) async throws -> [Movie] {
-        try searchResult.get()
-    }
-}
-
 private struct TestError: LocalizedError {
     var errorDescription: String? { "Test error description" }
 }
