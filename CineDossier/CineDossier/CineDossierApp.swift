@@ -9,6 +9,10 @@ import SwiftUI
 
 @main
 struct CineDossierApp: App {
+    #if os(iOS)
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
+    #endif
+    
     var body: some Scene {
         WindowGroup {
             RootView()

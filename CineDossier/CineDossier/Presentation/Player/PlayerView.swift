@@ -42,9 +42,15 @@ struct PlayerView: View {
             viewModel.start()
             await viewModel.observeEvents()
         }
+        .onAppear {
+            OrientationController.shared.set(.allButUpsideDown)
+        }
         .onDisappear {
+            OrientationController.shared.set(.portrait)
             viewModel.stop()
         }
+        .statusBarHidden()
+        .persistentSystemOverlays(.hidden)
     }
     
     private var playButton: some View {
@@ -59,7 +65,11 @@ struct PlayerView: View {
     
     private var closeButton: some View {
         Button {
-            dismiss()
+            OrientationController.shared.set(.portrait)
+                Task {
+                    try? await Task.sleep(for: .milliseconds(350))
+                    dismiss()
+                }
         } label: {
             Image(systemName: "xmark")
                 .font(.system(size: 16, weight: .bold))
