@@ -23,27 +23,65 @@ struct PlayerView: View {
         viewModel = PlayerViewModel(engine: engine, items: items)
     }
     
-    
     var body: some View {
         ZStack {
             PlayerLayerView(player: player)
                 .ignoresSafeArea()
-            if [.loading, .buffering].contains(viewModel.status) {
-                ProgressView()
-            } else {
-                playButton
+            
+            Color.clear
+                .contentShape(Rectangle())
+                .onTapGesture { viewModel.toggleControls() }
+            
+            if viewModel.isUpNextVisible, let next = viewModel.upNext {
+                UpNextOverlay(title: next.title,
+                              remainingTime: viewModel.upNextSecondsRemaining,
+                              onTapNext: viewModel.playNextNow,
+                              onDismiss: viewModel.dismissUpNext)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomTrailing)
+                .padding(.trailing, 24)
+                .padding(.bottom, viewModel.controlsVisible ? 88 : 24)
+                .transition(.move(edge: .trailing).combined(with: .opacity))
             }
+            
+            PlayerControlsView(title: viewModel.currentItem?.title,
+                               isPlaying: viewModel.isPlaying,
+                               isBusy: [.loading, .buffering].contains(viewModel.status),
+                               currentTime: viewModel.currentTime,
+                               duration: viewModel.duration,
+                               onClose: {
+                close()
+            }, onTogglePlay: {
+                viewModel.togglePlayPause()
+                viewModel.showControls()
+            }, onScrub: {
+                viewModel.scrub(to: $0)
+            }, onScrubbingChanged: { editing in
+                if editing {
+                    viewModel.beginScrubbing()
+                } else {
+                    Task {
+                        await viewModel.endScrubbing()
+                    }
+                }
+            })
+            .opacity(viewModel.controlsVisible ? 1 : 0)
+            .animation(.easeInOut(duration: 0.25), value: viewModel.controlsVisible)
+            .allowsHitTesting(viewModel.controlsVisible)
         }
         .background(.black)
-        .overlay(alignment: .topLeading) {
-            closeButton
-        }
+        .animation(.easeInOut(duration: 0.25), value: viewModel.isUpNextVisible)
+        .animation(.easeInOut(duration: 0.25), value: viewModel.controlsVisible)
         .task {
             viewModel.start()
             await viewModel.observeEvents()
         }
         .onAppear {
             OrientationController.shared.set(.allButUpsideDown)
+        }
+        .onChange(of: viewModel.shouldClose) { _, shouldClose in
+            if shouldClose {
+                close()
+            }
         }
         .onDisappear {
             OrientationController.shared.set(.portrait)
@@ -53,34 +91,13 @@ struct PlayerView: View {
         .persistentSystemOverlays(.hidden)
     }
     
-    private var playButton: some View {
-        Button {
-            viewModel.togglePlayPause()
-        } label: {
-            Image(systemName: viewModel.isPlaying ? "pause.fill" : "play.fill")
-                .resizable()
-                .frame(width: 24, height: 24)
-        }.tint(.textPrimary)
-    }
-    
-    private var closeButton: some View {
-        Button {
-            OrientationController.shared.set(.portrait)
-                Task {
-                    try? await Task.sleep(for: .milliseconds(350))
-                    dismiss()
-                }
-        } label: {
-            Image(systemName: "xmark")
-                .font(.system(size: 16, weight: .bold))
-                .foregroundStyle(.white)
-                .frame(width: 36, height: 36)
-                .background(.black.opacity(0.5), in: Circle())
+    private func close() {
+        OrientationController.shared.set(.portrait)
+        Task {
+            try? await Task.sleep(for: .milliseconds(350))
+            dismiss()
         }
-        .padding(16)
-        .accessibilityLabel("Close")
     }
-    
 }
 
 #Preview {

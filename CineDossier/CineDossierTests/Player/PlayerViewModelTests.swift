@@ -23,7 +23,7 @@ extension PlaybackItem {
 final class PlayerViewModelTests: XCTestCase {
     private func makeSUT(items: [PlaybackItem]) -> (PlayerViewModel, MockPlayerEngine) {
         let engine = MockPlayerEngine()
-        return (PlayerViewModel(engine: engine, items: items), engine)
+        return (PlayerViewModel(engine: engine, items: items, autoHideDelay: .milliseconds(20)), engine)
     }
     
     func testDidPlayToEndLoadNextItem() {
@@ -83,7 +83,7 @@ final class PlayerViewModelTests: XCTestCase {
         XCTAssertEqual(viewModel.status, .playing)
     }
     
-    func testSetDuration() {
+    func testSetDurationCorrectlyWhenNotScrubbing() {
         let itemA = PlaybackItem.stub()
         let itemB = PlaybackItem.stub()
         let (viewModel, _) = makeSUT(items: [itemA, itemB])
@@ -92,5 +92,61 @@ final class PlayerViewModelTests: XCTestCase {
         viewModel.start()
         viewModel.handle(.duration(duration))
         XCTAssertEqual(viewModel.duration, duration)
+    }
+    
+    func testIsPlayingIsTrueIfStatusPlayingIsSend() {
+        let itemA = PlaybackItem.stub()
+        let (viewModel, _) = makeSUT(items: [itemA])
+        
+        viewModel.start()
+        viewModel.handle(.status(.playing))
+        XCTAssertTrue(viewModel.isPlaying)
+        viewModel.handle(.status(.paused))
+        XCTAssertFalse(viewModel.isPlaying)
+    }
+    
+    func testTogglePlayPauseCallsPauseAndPlay() {
+        let itemA = PlaybackItem.stub()
+        let (viewModel, engine) = makeSUT(items: [itemA])
+        
+        viewModel.start()
+        XCTAssertEqual(engine.playCallCount, 1)
+        viewModel.handle(.status(.playing))
+        viewModel.togglePlayPause()
+        XCTAssertEqual(engine.pauseCallCount, 1)
+        viewModel.handle(.status(.paused))
+        viewModel.togglePlayPause()
+        XCTAssertEqual(engine.playCallCount, 2)
+    }
+    
+    func testBeginScrubbingCancelsAutohide() async throws {
+        let itemA = PlaybackItem.stub()
+        let (viewModel, _) = makeSUT(items: [itemA])
+        
+        viewModel.start()
+        viewModel.handle(.status(.playing))
+        viewModel.beginScrubbing()
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertTrue(viewModel.controlsVisible)
+    }
+    
+    func testControlsHideAfterDelayWhilePlaying() async throws {
+        let itemA = PlaybackItem.stub()
+        let (viewModel, _) = makeSUT(items: [itemA])
+        
+        viewModel.start()
+        viewModel.handle(.status(.playing))
+        try await Task.sleep(for: .milliseconds(100))
+        XCTAssertFalse(viewModel.controlsVisible)
+    }
+    
+    func testPlayerClosesUponReachingEndWithUpNextDismissed() {
+        let itemA = PlaybackItem.stub()
+        let (viewModel, _) = makeSUT(items: [itemA])
+        
+        viewModel.start()
+        viewModel.dismissUpNext()
+        viewModel.handle(.didPlayToEnd)
+        XCTAssertTrue(viewModel.shouldClose)
     }
 }
