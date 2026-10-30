@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct CineDossierApp: App {
@@ -17,5 +18,6 @@ struct CineDossierApp: App {
         WindowGroup {
             RootView()
         }
+        .modelContainer(Persistence.container)
     }
 }

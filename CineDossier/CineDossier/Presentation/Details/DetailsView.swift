@@ -7,58 +7,6 @@
 
 import SwiftUI
 
-@Observable
-class DetailsViewModel {
-    let movie: Movie
-    let playbackRepository: PlaybackRepository
-    
-    private(set) var isLoadingPlayback = false
-    private(set) var playbackItems: [PlaybackItem] = []
-    var isPlayerPresented = false
-    var errorMessage: String?
-    
-    init(movie: Movie,
-         playbackRepository: PlaybackRepository = StaticPlaybackRepository()) {
-        self.movie = movie
-        self.playbackRepository = playbackRepository
-    }
-    
-    var title: String {
-        movie.title
-    }
-    
-    var averageVote: Double {
-        movie.voteAverage
-    }
-    
-    var description: String {
-        movie.overview
-    }
-    
-    var poster: URL? {
-        movie.posterURL(size: .large)
-    }
-    
-    func didTapPlay() async {
-        guard !isLoadingPlayback else { return }
-        isLoadingPlayback = true
-        errorMessage = nil
-        defer { isLoadingPlayback = false }
-
-        do {
-            let items = try await playbackRepository.items(for: movie)
-            guard !items.isEmpty else {
-                errorMessage = "No items to play"
-                return
-            }
-            playbackItems = items
-            isPlayerPresented = true
-        } catch {
-            errorMessage = error.localizedDescription
-        }
-    }
-}
-
 struct DetailsView: View {
     @State
     private var viewModel: DetailsViewModel
@@ -92,6 +40,9 @@ struct DetailsView: View {
             }
         } message: {
             Text(viewModel.errorMessage ?? "")
+        }
+        .task {
+            await viewModel.loadWatchListState()
         }
     }
 
@@ -143,6 +94,16 @@ struct DetailsView: View {
             }
             .buttonStyle(PrimaryButtonStyle())
             .disabled(viewModel.isLoadingPlayback)
+            
+            Button {
+                Task { await viewModel.toggleWatchlist() }
+            } label: {
+                Label(
+                    viewModel.isInWatchlist ? "In watchlist" : "Add to watchlist",
+                    systemImage: viewModel.isInWatchlist ? "checkmark" : "plus"
+                )
+            }
+            .buttonStyle(SecondaryButtonStyle())
             .padding(.bottom, 16)
             
             Text("Description")
